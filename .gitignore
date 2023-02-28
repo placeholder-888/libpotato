@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+.idea
+build
+release
+build_clang
+release_clang
