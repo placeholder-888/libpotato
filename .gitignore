@@ -36,3 +36,9 @@ build
 release
 build_clang
 release_clang
+build-mingw
+build-wsl
+build-wsl-clang
+release-mingw
+release-wsl
+release-wsl-clang
