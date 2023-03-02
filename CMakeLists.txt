@@ -45,3 +45,5 @@ if (BOOSTTEST_LIBRARY)
 endif ()
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/potato)
+add_subdirectory(${PROJECT_SOURCE_DIR}/tests)
+include_directories(${PROJECT_SOURCE_DIR})

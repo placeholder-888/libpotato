@@ -11,11 +11,28 @@
 #define potato_ntohs(x) be16toh(x)
 #elif defined(WIN64) || defined(_WIN64) || defined(__WIN64__) ||               \
     defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#include <windows.h>
 #include <winsock2.h>
-#define potato_htonll(x) htonll(x)
+#define HTONLL(x)                                                              \
+  ((1 == htonl(1))                                                             \
+       ? (x)                                                                   \
+       : ((static_cast<uint64_t>(htonl((x)&0xFFFFFFFFUL))) << 32) |            \
+             htonl(static_cast<uint32_t>((x) >> 32)))
+
+#define NTOHLL(x)                                                              \
+  ((1 == ntohl(1))                                                             \
+       ? (x)                                                                   \
+       : ((static_cast<uint64_t>(ntohl((x)&0xFFFFFFFFUL))) << 32) |            \
+             ntohl(static_cast<uint32_t>((x) >> 32)))
+
+#define potato_htonll(x) HTONLL(x)
+//FIXME MINGW找不到htonll?
+//#define potato_htonll(x) htonll(x)
 #define potato_htonl(x) htonl(x)
 #define potato_htons(x) htons(x)
-#define potato_ntohll(x) ntohll(x)
+//FIXME MINGW找不到ntohll?
+//#define potato_ntohll(x) ntohll(x)
+#define potato_ntohll(x) NTOHLL(x)
 #define potato_ntohl(x) ntohl(x)
 #define potato_ntohs(x) ntohs(x)
 #endif

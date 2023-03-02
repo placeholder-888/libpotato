@@ -1,10 +1,7 @@
 #ifndef POTATO_POTATO_NET_IPADDRESS_H_
 #define POTATO_POTATO_NET_IPADDRESS_H_
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <string>
-
+#include "SocketCommon.h"
 #include "../utils/Endian.h"
 #include "../utils/StringSlice.h"
 

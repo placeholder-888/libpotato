@@ -1,9 +1,11 @@
 set(
     src
-    net/IpAddress.h
-    net/SocketCommon.h
-    utils/StringSlice.h
-    utils/Endian.h
+    net/SocketCommon.cpp
 )
 
-add_executable(main main.cpp ${src})
+if (UNIX)
+  link_libraries(pthread)
+else ()
+  link_libraries(ws2_32 wsock32)
+endif ()
+add_library(potato ${src})
