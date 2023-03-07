@@ -11,7 +11,6 @@
 #define potato_ntohs(x) be16toh(x)
 #elif defined(WIN64) || defined(_WIN64) || defined(__WIN64__) ||               \
     defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-#include <windows.h>
 #include <winsock2.h>
 #define HTONLL(x)                                                              \
   ((1 == htonl(1))                                                             \

@@ -1,4 +1,7 @@
 include_directories(${PROJECT_SOURCE_DIR})
 
-add_executable(SocketCommonTest SocketCommonTest.cpp)
-target_link_libraries(SocketCommonTest PRIVATE potato)
+add_executable(SocketCommonEchoTest_Client SocketCommonEchoTest_Client.cpp)
+target_link_libraries(SocketCommonEchoTest_Client PRIVATE potato)
+
+add_executable(SocketCommonEchoTest_Server SocketCommonEchoTest_Server.cpp)
+target_link_libraries(SocketCommonEchoTest_Server PRIVATE potato)

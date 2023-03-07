@@ -2,23 +2,29 @@
 #define POTATO_POTATO_NET_SOCKETCOMMON_H_
 
 #include <cerrno>
+#include <cstring>
 #include <string>
 
 #if defined(linux) || defined(__linux) || defined(__linux__)
 #include <arpa/inet.h>
+#include <csignal>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #define SOCKET int
 #define INVALID_SOCKET (-1)
 #define PLATFORM_LINUX
+#define perrno errno
+#define PAGIN EAGAIN
 #elif defined(WIN64) || defined(_WIN64) || defined(__WIN64__) ||               \
     defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #define PLATFORM_WINDOWS
 #include <WS2tcpip.h>
 #include <WinSock2.h>
-
+#define perrno (WSAGetLastError())
+#define PAGAIN (WSAEWOULDBLOCK)
 #endif
 
 namespace potato {
@@ -28,6 +34,9 @@ int close(SOCKET socket);
 int setNonBlock(SOCKET socket);
 int setSockOpt(SOCKET socket, int level, int name, const void *option,
                socklen_t len);
+std::string strError(int err);
+int getSockOpt(SOCKET socket, int level, int name, void *option,
+               socklen_t *len);
 int setReuseAddr(SOCKET socket, bool on);
 int setReusePort(SOCKET socket, bool on);
 int setKeepAlive(SOCKET socket, bool on);

@@ -1,7 +1,7 @@
-#include "potato/net/SocketCommon.h"
 #include "potato/log/Logger.h"
+#include "potato/net/SocketCommon.h"
 #include "potato/utils/Endian.h"
-#include <memory>
+#include <cassert>
 #include <thread>
 #include <vector>
 
@@ -12,21 +12,23 @@ int main() {
     LOG_FATAL("cannot create socket");
     abort();
   }
-  struct sockaddr_in addr;
+  struct sockaddr_in addr {};
   addr.sin_family = AF_INET;
   addr.sin_port = potato::endian::hostToNetwork16(8888);
   addr.sin_addr.s_addr = INADDR_ANY;
+  assert(potato::setReusePort(socket, true) == 0);
+  assert(potato::setReuseAddr(socket, true) == 0);
   if (potato::bind(socket, reinterpret_cast<const sockaddr *>(&addr),
                    sizeof(addr)) < 0) {
-    LOG_FATAL("bind()");
+    LOG_FATAL("bind() %s", potato::strError(perrno).c_str());
     abort();
   }
   if (potato::listen(socket) < 0) {
     LOG_FATAL("cannot create socket");
     abort();
   }
-  while (true) {
-    struct sockaddr_in6 peerAddr;
+  for (int i = 0; i < 100; ++i) {
+    struct sockaddr_in6 peerAddr {};
     socklen_t len = sizeof(peerAddr);
     auto conn =
         potato::accept(socket, reinterpret_cast<sockaddr *>(&peerAddr), &len);
@@ -37,12 +39,23 @@ int main() {
       LOG_INFO("new Connection %s:%d", buf,
                potato::endian::networkToHost16(a->sin_port));
     }
+    if (potato::setTcpNoDelay(conn, true) != 0) {
+      LOG_ERROR("setTcpNoDelay()");
+    } else {
+      LOG_INFO("setTcpNoDelay() success");
+    }
+    if (potato::setKeepAlive(conn, true) != 0) {
+      LOG_ERROR("setKeepAlive()");
+    } else {
+      LOG_INFO("setKeepAlive() success");
+    }
     auto thread = new std::thread([conn]() {
       while (true) {
         char buf[1024];
         auto size = potato::read(conn, buf, sizeof buf);
         if (size < 0) {
-          LOG_ERROR("read error");
+          LOG_ERROR("read error %s", potato::strError(perrno).c_str());
+          break;
         } else if (size == 0) {
           LOG_INFO("the peer closed the connection");
           break;
@@ -52,7 +65,11 @@ int main() {
           potato::write(conn, buf, static_cast<size_t>(size));
         }
       }
+      potato::close(conn);
     });
     threads_.emplace_back(thread);
+  }
+  for (auto &thread : threads_) {
+    thread->join();
   }
 }

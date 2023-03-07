@@ -2,8 +2,8 @@
 #define POTATO_POTATO_NET_IPADDRESS_H_
 
 #include "SocketCommon.h"
-#include "../utils/Endian.h"
-#include "../utils/StringSlice.h"
+#include "potato/utils/Endian.h"
+#include "potato/utils/StringSlice.h"
 
 namespace potato {
 
