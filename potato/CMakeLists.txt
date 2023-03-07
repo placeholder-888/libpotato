@@ -1,6 +1,8 @@
 set(
     src
+    net/IpAddress.cpp
     net/SocketCommon.cpp
+    net/Socket.cpp
 )
 
 if (UNIX)

@@ -43,6 +43,7 @@ int setKeepAlive(SOCKET socket, bool on);
 int setTcpNoDelay(SOCKET socket, bool on);
 int bind(SOCKET socket, const struct sockaddr *addr, socklen_t len);
 SOCKET accept(SOCKET socket, struct sockaddr *addr, socklen_t *len);
+SOCKET accept(SOCKET socket, struct sockaddr_in6 *addr, socklen_t *len);
 int listen(SOCKET socket);
 int getSocketError(SOCKET socket);
 std::string getSocketErrorStr(SOCKET socket);

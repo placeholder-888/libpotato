@@ -1,10 +1,13 @@
 #include "potato/log/Logger.h"
+#include "potato/net/Socket.h"
 #include "potato/net/SocketCommon.h"
 #include "potato/utils/Endian.h"
 #include <cassert>
+#include <map>
+#include <set>
 #include <thread>
 #include <vector>
-
+/*
 int main() {
   std::vector<std::unique_ptr<std::thread>> threads_;
   SOCKET socket = potato::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -72,4 +75,103 @@ int main() {
   for (auto &thread : threads_) {
     thread->join();
   }
+}
+*/
+
+int main() {
+  std::vector<std::unique_ptr<std::thread>> threads;
+  potato::ListenSocket listenSocket;
+  potato::IpAddress hostAddress(8888);
+  listenSocket.bind(hostAddress);
+  listenSocket.listen();
+  std::map<SOCKET, potato::Socket> sockets;
+  std::set<SOCKET> activeSockets;
+  fd_set allSet;
+  FD_ZERO(&allSet);
+  FD_SET(listenSocket.getPlatformSocket(), &allSet);
+  while (true) {
+    fd_set readSet = allSet;
+    int nready = select(1 + static_cast<int>(activeSockets.size()), &readSet,
+                        nullptr, nullptr, nullptr);
+    if (nready < 0) {
+      LOG_ERROR("select() %s", potato::strError(perrno).c_str());
+      break;
+    } else if (nready == 0) {
+      continue;
+    }
+    if (FD_ISSET(listenSocket.getPlatformSocket(), &readSet)) {
+      auto p = listenSocket.accept();
+      if (p.first == INVALID_SOCKET) {
+        LOG_ERROR("accept() %s", potato::strError(perrno).c_str());
+        break;
+      } else {
+        LOG_INFO("new Connection %s", p.second.IpPort().c_str());
+        sockets.emplace(p.first, potato::Socket(p.first));
+        auto it = sockets.find(p.first);
+        assert(it != sockets.end());
+        it->second.setIpAddress(p.second);
+        FD_SET(p.first, &allSet);
+        activeSockets.insert(p.first);
+      }
+    } else {
+      for (auto it = activeSockets.begin(); it != activeSockets.end(); ++it) {
+        if (FD_ISSET(*it, &readSet)) {
+          char buf[4096];
+          auto sit = sockets.find(*it);
+          assert(sit != sockets.end());
+          auto size = sit->second.read(buf, sizeof buf);
+          if (size <= 0) {
+            if (size < 0)
+              LOG_ERROR("read error %s", potato::strError(perrno).c_str());
+            else
+              LOG_INFO("the peer closed the connection addr:%s",
+                       sit->second.ipAddress().IpPort().c_str());
+            FD_CLR(*it, &allSet);
+            activeSockets.erase(it);
+            break;
+          } else {
+            buf[size] = 0;
+            LOG_INFO("received from %s content: %s",
+                     sit->second.ipAddress().IpPort().c_str(), buf);
+            sit->second.write(buf, static_cast<size_t>(size));
+          }
+        }
+      }
+    }
+  }
+  /*
+  while (true) {
+    auto p = listenSocket.accept();
+    if (p.first == INVALID_SOCKET) {
+      LOG_ERROR("accept() %s", potato::strError(perrno).c_str());
+      break;
+    } else {
+      LOG_INFO("new Connection %s", p.second.IpPort().c_str());
+      threads.emplace_back(new std::thread([p]() {
+        potato::Socket socket(p.first);
+        socket.setIpAddress(p.second);
+        while (true) {
+          char buf[4096];
+          auto size = socket.read(buf, sizeof buf);
+          if (size < 0) {
+            LOG_ERROR("read error %s", potato::strError(perrno).c_str());
+            break;
+          } else if (size == 0) {
+            LOG_INFO("the peer closed the connection addr:%s",
+                     socket.ipAddress().IpPort().c_str());
+            break;
+          } else {
+            buf[size] = 0;
+            LOG_INFO("received from %s content: %s",
+                     socket.ipAddress().IpPort().c_str(), buf);
+            socket.write(buf, static_cast<size_t>(size));
+          }
+        }
+      }));
+    }
+  }
+  for (auto &thread : threads) {
+    thread->join();
+  }
+   */
 }

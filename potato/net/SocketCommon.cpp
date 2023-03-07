@@ -83,7 +83,6 @@ std::string strError(int err) {
   switch (WSAGetLastError()) {
   case 0:
     return "No error";
-    // give all winerror.h error codes
   case WSAEACCES:
     return "Permission denied";
   case WSAEWOULDBLOCK:
@@ -195,6 +194,10 @@ int listen(SOCKET socket) { return ::listen(socket, SOMAXCONN); }
 
 SOCKET accept(SOCKET socket, struct sockaddr *addr, socklen_t *len) {
   return ::accept(socket, addr, len);
+}
+
+SOCKET accept(SOCKET socket, struct sockaddr_in6 *addr, socklen_t *len) {
+  return ::accept(socket, reinterpret_cast<struct sockaddr *>(addr), len);
 }
 
 int getSocketError(SOCKET socket) {
