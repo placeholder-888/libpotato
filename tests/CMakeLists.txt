@@ -3,9 +3,9 @@ include_directories(${PROJECT_SOURCE_DIR})
 add_executable(IpAddressTest IpAddressTest.cpp)
 target_link_libraries(IpAddressTest PRIVATE potato)
 
-add_executable(SocketCommonEchoTest_Client SocketCommonEchoTest_Client.cpp)
-target_link_libraries(SocketCommonEchoTest_Client PRIVATE potato)
+add_executable(SocketTestEchoServer SocketTestEchoServer.cpp)
+target_link_libraries(SocketTestEchoServer PRIVATE potato)
 
-add_executable(SocketCommonEchoTest_Server SocketCommonEchoTest_Server.cpp)
-target_link_libraries(SocketCommonEchoTest_Server PRIVATE potato)
+add_executable(SocketTestEchoClient SocketTestEchoClient.cpp)
+target_link_libraries(SocketTestEchoClient PRIVATE potato)
 

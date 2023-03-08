@@ -26,6 +26,7 @@ public:
   int getSocketError() const;
   std::string getSocketErrorStr() const;
   SOCKET getPlatformSocket() const { return socket_; }
+  bool connect(const IpAddress &address);
 
 protected:
   SOCKET socket_;

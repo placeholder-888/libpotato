@@ -91,8 +91,7 @@ int main() {
   FD_SET(listenSocket.getPlatformSocket(), &allSet);
   while (true) {
     fd_set readSet = allSet;
-    int nready = select(1 + static_cast<int>(activeSockets.size()), &readSet,
-                        nullptr, nullptr, nullptr);
+    int nready = select(1024, &readSet, nullptr, nullptr, nullptr);
     if (nready < 0) {
       LOG_ERROR("select() %s", potato::strError(perrno).c_str());
       break;
@@ -127,7 +126,10 @@ int main() {
               LOG_INFO("the peer closed the connection addr:%s",
                        sit->second.ipAddress().IpPort().c_str());
             FD_CLR(*it, &allSet);
+            sockets.erase(sit);
             activeSockets.erase(it);
+            LOG_INFO("cur active connection Count:%d",
+                     static_cast<int>(activeSockets.size()));
             break;
           } else {
             buf[size] = 0;

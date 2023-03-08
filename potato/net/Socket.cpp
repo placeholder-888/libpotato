@@ -124,3 +124,17 @@ std::pair<SOCKET, potato::IpAddress> ListenSocket::accept() {
   IpAddress address(addr);
   return std::make_pair(sock, address);
 }
+
+bool Socket::connect(const IpAddress &address) {
+  assert(isOpen_);
+  socklen_t addrLen =
+      address.ipv6() ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
+  if (potato::connect(socket_, address.getSockAddr(), addrLen) < 0) {
+    return false;
+  }
+  struct sockaddr_in6 addr {};
+  socklen_t len = sizeof(addr);
+  ::getsockname(socket_, reinterpret_cast<sockaddr *>(&addr), &len);
+  address_ = IpAddress(addr);
+  return true;
+}
