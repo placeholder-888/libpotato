@@ -38,12 +38,6 @@ string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE)
 message(STATUS "CXX_FLAGS = " ${CMAKE_CXX_FLAGS} " "
     ${CMAKE_CXX_FLAGS_${BUILD_TYPE}})
 
-find_library(BOOSTTEST_LIBRARY NAMES boost_unit_test_framework)
-
-if (BOOSTTEST_LIBRARY)
-  message(STATUS "found boost test library")
-endif ()
-
 add_subdirectory(${PROJECT_SOURCE_DIR}/potato)
 add_subdirectory(${PROJECT_SOURCE_DIR}/tests)
 include_directories(${PROJECT_SOURCE_DIR})

@@ -1,5 +1,7 @@
 #include "potato/net/SocketCommon.h"
 #include "potato/log/Logger.h"
+#include "potato/utils/ScopeGuard.h"
+#include <cassert>
 
 namespace potato {
 #ifdef PLATFORM_WINDOWS
@@ -26,11 +28,11 @@ public:
 static IgnoreSigPipe _;
 #endif
 
-SOCKET socket(int family, int type, int protocol) {
+socket_t socket(int family, int type, int protocol) {
   return ::socket(family, type, protocol);
 }
 
-int close(SOCKET socket) {
+int close(socket_t socket) {
 #ifdef PLATFORM_WINDOWS
   return ::closesocket(socket);
 #else
@@ -38,7 +40,7 @@ int close(SOCKET socket) {
 #endif
 }
 
-int setNonBlock(SOCKET socket) {
+int setNonBlock(socket_t socket) {
 #ifdef PLATFORM_WINDOWS
   u_long nonblock = 1;
   return ::ioctlsocket(socket, static_cast<long>(FIONBIO), &nonblock);
@@ -48,7 +50,7 @@ int setNonBlock(SOCKET socket) {
 #endif
 }
 
-int setSockOpt(SOCKET socket, int level, int name, const void *option,
+int setSockOpt(socket_t socket, int level, int name, const void *option,
                socklen_t len) {
 #ifdef PLATFORM_WINDOWS
   return ::setsockopt(socket, level, name, static_cast<const char *>(option),
@@ -58,12 +60,12 @@ int setSockOpt(SOCKET socket, int level, int name, const void *option,
 #endif
 }
 
-int setReuseAddr(SOCKET socket, bool on) {
+int setReuseAddr(socket_t socket, bool on) {
   int option = on ? 1 : 0;
   return setSockOpt(socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 }
 
-int setReusePort(SOCKET socket, bool on) {
+int setReusePort(socket_t socket, bool on) {
 #ifdef PLATFORM_LINUX
   int option = on ? 1 : 0;
   return setSockOpt(socket, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option));
@@ -73,14 +75,14 @@ int setReusePort(SOCKET socket, bool on) {
 #endif
 }
 
-int setKeepAlive(SOCKET socket, bool on) {
+int setKeepAlive(socket_t socket, bool on) {
   int option = on ? 1 : 0;
   return setSockOpt(socket, SOL_SOCKET, SO_KEEPALIVE, &option, sizeof(option));
 }
 
 std::string strError(int err) {
 #ifdef PLATFORM_WINDOWS
-  switch (WSAGetLastError()) {
+  switch (err) {
   case 0:
     return "No error";
   case WSAEACCES:
@@ -171,7 +173,7 @@ std::string strError(int err) {
 #endif
 }
 
-int getSockOpt(SOCKET socket, int level, int name, void *option,
+int getSockOpt(socket_t socket, int level, int name, void *option,
                socklen_t *len) {
 #ifdef PLATFORM_WINDOWS
   return ::getsockopt(socket, level, name, reinterpret_cast<char *>(option),
@@ -181,26 +183,26 @@ int getSockOpt(SOCKET socket, int level, int name, void *option,
 #endif
 }
 
-int setTcpNoDelay(SOCKET socket, bool on) {
+int setTcpNoDelay(socket_t socket, bool on) {
   int option = on ? 1 : 0;
   return setSockOpt(socket, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
 }
 
-int bind(SOCKET socket, const struct sockaddr *addr, socklen_t len) {
+int bind(socket_t socket, const struct sockaddr *addr, socklen_t len) {
   return ::bind(socket, addr, len);
 }
 
-int listen(SOCKET socket) { return ::listen(socket, SOMAXCONN); }
+int listen(socket_t socket) { return ::listen(socket, SOMAXCONN); }
 
-SOCKET accept(SOCKET socket, struct sockaddr *addr, socklen_t *len) {
+socket_t accept(socket_t socket, struct sockaddr *addr, socklen_t *len) {
   return ::accept(socket, addr, len);
 }
 
-SOCKET accept(SOCKET socket, struct sockaddr_in6 *addr, socklen_t *len) {
+socket_t accept(socket_t socket, struct sockaddr_in6 *addr, socklen_t *len) {
   return ::accept(socket, reinterpret_cast<struct sockaddr *>(addr), len);
 }
 
-int getSocketError(SOCKET socket) {
+int getSocketError(socket_t socket) {
   int sockErrno = 0;
   socklen_t len = sizeof(sockErrno);
   if (getSockOpt(socket, SOL_SOCKET, SO_ERROR, &sockErrno, &len) < 0) {
@@ -209,12 +211,12 @@ int getSocketError(SOCKET socket) {
   return sockErrno;
 }
 
-std::string getSocketErrorStr(SOCKET socket) {
+std::string getSocketErrorStr(socket_t socket) {
   int err = getSocketError(socket);
   return strError(err);
 }
 
-ssize_t read(SOCKET socket, void *buf, size_t size) {
+ssize_t read(socket_t socket, void *buf, size_t size) {
 #ifdef PLATFORM_WINDOWS
   return ::recv(socket, static_cast<char *>(buf), static_cast<int>(size), 0);
 #else
@@ -222,7 +224,7 @@ ssize_t read(SOCKET socket, void *buf, size_t size) {
 #endif
 }
 
-ssize_t write(SOCKET socket, const void *buf, size_t size) {
+ssize_t write(socket_t socket, const void *buf, size_t size) {
 #ifdef PLATFORM_WINDOWS
   return ::send(socket, static_cast<const char *>(buf), static_cast<int>(size),
                 0);
@@ -231,7 +233,7 @@ ssize_t write(SOCKET socket, const void *buf, size_t size) {
 #endif
 }
 
-int connect(SOCKET socket, const struct sockaddr *addr, socklen_t len) {
+int connect(socket_t socket, const struct sockaddr *addr, socklen_t len) {
 #ifdef PLATFORM_WINDOWS
   return ::connect(socket, addr, len);
 #else
@@ -239,4 +241,41 @@ int connect(SOCKET socket, const struct sockaddr *addr, socklen_t len) {
 #endif
 }
 
+int socketPair(socket_t socket[2]) {
+#ifdef PLATFORM_WINDOWS
+  socket_t listenSock = potato::socket(AF_INET, SOCK_STREAM, 0);
+  // SocketScopeGuard guard1(listenSock);
+  socket_t clientSock = potato::socket(AF_INET, SOCK_STREAM, 0);
+  SocketScopeGuard guard2(clientSock);
+  if (listenSock == INVALID_SOCKET || clientSock == INVALID_SOCKET) {
+    return -1;
+  }
+  struct sockaddr_in addr {};
+  addr.sin_port = htons(61415);
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = ::htonl(INADDR_LOOPBACK);
+  if (::bind(listenSock, reinterpret_cast<struct sockaddr *>(&addr),
+             sizeof(addr)) != 0) {
+    return -1;
+  }
+  if (::listen(listenSock, SOMAXCONN) != 0) {
+    return -1;
+  }
+  if (::connect(clientSock, reinterpret_cast<struct sockaddr *>(&addr),
+                sizeof(addr)) < 0) {
+    LOG_ERROR("connect error %s", potato::strError(perrno).c_str());
+    return -1;
+  }
+  socket_t serverSock = ::accept(listenSock, nullptr, nullptr);
+  if (serverSock == INVALID_SOCKET) {
+    return -1;
+  }
+  socket[0] = clientSock;
+  socket[1] = serverSock;
+  guard2.release();
+  return 0;
+#else
+  return ::socketpair(AF_UNIX, SOCK_STREAM, 0, socket);
+#endif
+}
 } // namespace potato

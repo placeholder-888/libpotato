@@ -74,8 +74,9 @@ std::string Socket::getSocketErrorStr() const {
   return potato::getSocketErrorStr(socket_);
 }
 
-SOCKET createListenSocket() {
-  SOCKET listenSock = potato::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+socket_t createListenSocket(bool ipv6) {
+  socket_t listenSock =
+      potato::socket(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (listenSock == INVALID_SOCKET) {
     LOG_FATAL("createListenSocket()");
     abort();
@@ -84,7 +85,8 @@ SOCKET createListenSocket() {
   return listenSock;
 }
 
-ListenSocket::ListenSocket() : Socket(createListenSocket()), listening_(false) {
+ListenSocket::ListenSocket(bool ipv6)
+    : Socket(createListenSocket(ipv6)), listening_(false) {
   setReuseAddr(true);
   setReusePort(true);
 }
@@ -113,14 +115,12 @@ void ListenSocket::listen() {
   listening_ = true;
 }
 
-std::pair<SOCKET, potato::IpAddress> ListenSocket::accept() {
+std::pair<socket_t, potato::IpAddress> ListenSocket::accept() {
   assert(isOpen_);
   assert(listening_);
   struct sockaddr_in6 addr {};
   socklen_t addrLen = sizeof(addr);
-  SOCKET sock = potato::accept(socket_, &addr, &addrLen);
-  LOG_DEBUG("ListenSocket::accept() errorHappened:%s",
-            sock == INVALID_SOCKET ? "true" : "false");
+  socket_t sock = potato::accept(socket_, &addr, &addrLen);
   IpAddress address(addr);
   return std::make_pair(sock, address);
 }

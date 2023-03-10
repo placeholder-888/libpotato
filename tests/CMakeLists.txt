@@ -1,5 +1,8 @@
 include_directories(${PROJECT_SOURCE_DIR})
 
+add_executable(EventLoopTest EventLoopTest.cpp)
+target_link_libraries(EventLoopTest PRIVATE potato)
+
 add_executable(IpAddressTest IpAddressTest.cpp)
 target_link_libraries(IpAddressTest PRIVATE potato)
 
@@ -8,4 +11,3 @@ target_link_libraries(SocketTestEchoServer PRIVATE potato)
 
 add_executable(SocketTestEchoClient SocketTestEchoClient.cpp)
 target_link_libraries(SocketTestEchoClient PRIVATE potato)
-
