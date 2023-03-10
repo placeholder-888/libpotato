@@ -42,9 +42,7 @@ public:
   void setOnReadyWriteCallback(Callback cb) {
     readyWriteCallback_ = std::move(cb);
   }
-  void setOnErrorOccurredCallback(Callback cb) {
-    errorOccurredCallback_ = std::move(cb);
-  }
+
   void setOnConnectedCallback(Callback cb) {
     connectedCallback_ = std::move(cb);
   }
@@ -62,18 +60,16 @@ private:
   void handleRead();
   void handleWrite();
   void handleError();
-  void handleClose();
 
   void safeClose();
 
   enum ConnectionState { kConnected, kDisconnected };
   IpAddress peer_;
   std::atomic<ConnectionState> state_;
-  EventLoop *ownerLoop_{nullptr};
+  std::atomic<EventLoop *> ownerLoop_{nullptr};
   std::unique_ptr<IOEvent> event_;
   Callback readyReadCallback_;
   Callback readyWriteCallback_;
-  Callback errorOccurredCallback_;
   Callback connectedCallback_;
   Callback disconnectedCallback_;
 };

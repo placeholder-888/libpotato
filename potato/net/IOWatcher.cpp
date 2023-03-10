@@ -18,6 +18,7 @@ void IOWatcher::handleIOEvent(int timeoutMs) {
   assert(ownerLoop_->inLoopThread());
   int numEvents = epoll_wait(holder_, events_.data(),
                              static_cast<int>(events_.size()), timeoutMs);
+  LOG_DEBUG("epoll_wait return %d", numEvents);
   if (numEvents < 0) {
     LOG_ERROR("IOWatcher::handleIOEvent() error at epoll_wait");
     return;
@@ -26,14 +27,10 @@ void IOWatcher::handleIOEvent(int timeoutMs) {
   for (size_t i = 0; i < numEventsSize; ++i) {
     auto *event = static_cast<IOEvent *>(events_[i].data.ptr);
     auto ev = events_[i].events;
-    if (ev & EPOLLERR) {
-      if (event->errorCallback_)
-        event->errorCallback_();
-      return;
-    } else if (ev & (EPOLLHUP | EPOLLRDHUP)) {
+    if (ev & (EPOLLHUP | EPOLLRDHUP)) {
       if (event->closeCallback_)
         event->closeCallback_();
-      return;
+      continue;
     } else if (ev & (EPOLLIN | EPOLLPRI)) {
       if (event->readCallback_)
         event->readCallback_();

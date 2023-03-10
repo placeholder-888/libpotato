@@ -26,7 +26,7 @@ Acceptor::~Acceptor() {
     ::close(idleFd_);
   }
 #endif
-  loop_->runInLoop([this]() { ioEvent_->removeThisEvent(); });
+  ioEvent_->removeThisEvent();
 }
 
 void Acceptor::listen() {

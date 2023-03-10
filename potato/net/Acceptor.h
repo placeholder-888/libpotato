@@ -23,6 +23,8 @@ public:
 
   bool listening() const { return listenSocket_.listening(); }
 
+  const IpAddress &hostAddress() const { return hostAddress_; }
+
   void setNewConnectionCallback(NewConnectionCallback cb) {
     newConnectionCallback_ = std::move(cb);
   }

@@ -244,7 +244,7 @@ int connect(socket_t socket, const struct sockaddr *addr, socklen_t len) {
 int socketPair(socket_t socket[2]) {
 #ifdef PLATFORM_WINDOWS
   socket_t listenSock = potato::socket(AF_INET, SOCK_STREAM, 0);
-  // SocketScopeGuard guard1(listenSock);
+  SocketScopeGuard guard1(listenSock);
   socket_t clientSock = potato::socket(AF_INET, SOCK_STREAM, 0);
   SocketScopeGuard guard2(clientSock);
   if (listenSock == INVALID_SOCKET || clientSock == INVALID_SOCKET) {

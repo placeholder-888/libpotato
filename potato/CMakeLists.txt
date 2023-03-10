@@ -7,6 +7,7 @@ set(
     net/IOWatcher.cpp
     net/TcpSocket.cpp
     net/Acceptor.cpp
+    net/PlainTcpServer.cpp
 )
 
 if (UNIX)

@@ -4,7 +4,7 @@
 #include "potato/net/TcpSocket.h"
 #include <unordered_set>
 
-potato::EventLoop loop(false);
+potato::EventLoop loop(true);
 
 std::unordered_set<potato::TcpSocketPtr> connections;
 
@@ -13,18 +13,11 @@ void disconnection(potato::TcpSocketPtr conn) {
   connections.erase(conn);
 }
 
-void handleError(potato::TcpSocketPtr conn) {
-  LOG_ERROR("error occurred :%s %s", conn->peerAddr().IpPort().c_str(),
-            potato::strError(perrno).c_str());
-  conn->close();
-}
-
 void newConnection(potato::TcpSocketPtr sock) {
   LOG_INFO("new connection:%s", sock->peerAddr().IpPort().c_str());
   sock->attachToLoop(&loop);
   sock->setOnDisconnectedCallback(disconnection);
-  sock->setOnErrorOccurredCallback(handleError);
-  sock->setOnReadyReadCallback([&](potato::TcpSocketPtr conn) {
+  sock->setOnReadyReadCallback([](potato::TcpSocketPtr conn) {
     do {
       char buf[1024];
       auto n = conn->read(buf, sizeof(buf));
@@ -38,7 +31,7 @@ void newConnection(potato::TcpSocketPtr sock) {
         break;
       } else {
         if (perrno != PAGAIN) {
-          handleError(conn);
+          conn->close();
         }
         break;
       }

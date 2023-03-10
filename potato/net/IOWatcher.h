@@ -58,9 +58,7 @@ public:
   void setWriteCallback(Callback callback) {
     writeCallback_ = std::move(callback);
   }
-  void setErrorCallback(Callback callback) {
-    errorCallback_ = std::move(callback);
-  }
+
   void setCloseCallback(Callback callback) {
     closeCallback_ = std::move(callback);
   }
@@ -77,7 +75,6 @@ private:
   IOWatcher *watcher_;
   Callback readCallback_;
   Callback writeCallback_;
-  Callback errorCallback_;
   Callback closeCallback_;
   uint32_t events_{0};
 };
