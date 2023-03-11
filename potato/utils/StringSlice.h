@@ -70,6 +70,39 @@ public:
     return ret;
   }
 
+  const char *find(const StringSlice &slice) {
+    if (slice.empty() || empty())
+      return nullptr;
+    std::vector<size_t> next(slice.size(), 0);
+    size_t j = 0;
+    for (size_t i = 1; i < slice.size(); ++i) {
+      while (j > 0 && slice[i] != slice[j])
+        j = next[j - 1];
+      if (slice[i] == slice[j])
+        ++j;
+      next[i] = j;
+    }
+    j = 0;
+    for (size_t i = 0; i < len_; ++i) {
+      while (j > 0 && slice[j] != data_[i])
+        j = next[j - 1];
+      if (slice[j] == data_[i]) {
+        if (++j >= slice.size()) {
+          return data_ + i - j + 1;
+        }
+      }
+    }
+    return nullptr;
+  }
+
+  const char *find(char c) {
+    for (size_t i = 0; i < len_; ++i) {
+      if (data_[i] == c)
+        return data_ + i;
+    }
+    return nullptr;
+  }
+
 private:
   const char *data_;
   size_t len_;

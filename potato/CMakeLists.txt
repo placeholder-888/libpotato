@@ -8,6 +8,7 @@ set(
     net/TcpSocket.cpp
     net/Acceptor.cpp
     net/PlainTcpServer.cpp
+    net/Buffer.cpp
 )
 
 if (UNIX)

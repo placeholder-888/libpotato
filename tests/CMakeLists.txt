@@ -14,3 +14,6 @@ target_link_libraries(SocketTestEchoClient PRIVATE potato)
 
 add_executable(PlainTcpServerTest PlainTcpServerTest.cpp)
 target_link_libraries(PlainTcpServerTest PRIVATE potato)
+
+add_executable(BufferTest BufferTest.cpp)
+target_link_libraries(BufferTest PRIVATE potato)
