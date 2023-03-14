@@ -10,6 +10,8 @@ set(
     net/TcpConnection.cpp
     net/TcpServer.cpp
     net/EventLoopPool.cpp
+    time/Timestamp.cpp
+    time/Date.cpp
 )
 
 if (UNIX)

@@ -8,3 +8,6 @@ target_link_libraries(BufferTest PRIVATE potato)
 
 add_executable(EchoServerTest EchoServerTest.cpp)
 target_link_libraries(EchoServerTest PRIVATE potato)
+
+add_executable(TimeTest TimeTest.cpp)
+target_link_libraries(TimeTest PRIVATE potato)
