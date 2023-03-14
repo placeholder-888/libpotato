@@ -7,6 +7,7 @@ using namespace potato;
 class EchoServer {
 public:
   EchoServer(bool etMode) : server_(IpAddress(8888, true), etMode) {
+    server_.setThreadNum(4);
     server_.setMessageCallback(
         [this](TcpConnection *conn) { onMessage(conn); });
     server_.setConnectionCallback(

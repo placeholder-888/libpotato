@@ -1,6 +1,7 @@
 #ifndef POTATO_POTATO_NET_LOGGER_H_
 #define POTATO_POTATO_NET_LOGGER_H_
 
+#include "3rdparty/fmt/include/fmt/color.h"
 #include "3rdparty/fmt/include/fmt/core.h"
 #include <cstdio>
 #include <cstring>

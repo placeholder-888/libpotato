@@ -1,5 +1,6 @@
 #include "potato/net/SocketCommon.h"
 #include "potato/log/Logger.h"
+#include "potato/thread/Mutex.h"
 #include "potato/utils/ScopeGuard.h"
 #include <cassert>
 
@@ -243,7 +244,11 @@ int connect(socket_t socket, const struct sockaddr *addr, socklen_t len) {
 
 int socketPair(socket_t socket[2]) {
 #ifdef PLATFORM_WINDOWS
+  // windows平台需要加锁
+  static Mutex mutex;
+  MutexLockGuard guard(mutex);
   socket_t listenSock = potato::socket(AF_INET, SOCK_STREAM, 0);
+  potato::setReuseAddr(listenSock, true);
   SocketScopeGuard guard1(listenSock);
   socket_t clientSock = potato::socket(AF_INET, SOCK_STREAM, 0);
   SocketScopeGuard guard2(clientSock);
@@ -256,14 +261,16 @@ int socketPair(socket_t socket[2]) {
   addr.sin_addr.s_addr = ::htonl(INADDR_LOOPBACK);
   if (::bind(listenSock, reinterpret_cast<struct sockaddr *>(&addr),
              sizeof(addr)) != 0) {
+    LOG_ERROR("sockPair() bind error {}", potato::strError(perrno));
     return -1;
   }
   if (::listen(listenSock, SOMAXCONN) != 0) {
+    LOG_ERROR("sockPair() listen error {}", potato::strError(perrno));
     return -1;
   }
   if (::connect(clientSock, reinterpret_cast<struct sockaddr *>(&addr),
                 sizeof(addr)) < 0) {
-    LOG_ERROR("connect error {}", potato::strError(perrno));
+    LOG_ERROR("sockPair() connect error {}", potato::strError(perrno));
     return -1;
   }
   socket_t serverSock = ::accept(listenSock, nullptr, nullptr);

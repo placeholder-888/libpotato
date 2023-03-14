@@ -9,6 +9,7 @@ set(
     net/Buffer.cpp
     net/TcpConnection.cpp
     net/TcpServer.cpp
+    net/EventLoopPool.cpp
 )
 
 if (UNIX)

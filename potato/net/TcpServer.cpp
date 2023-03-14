@@ -5,7 +5,7 @@
 using potato::TcpServer;
 
 TcpServer::TcpServer(const IpAddress &addr, bool etMode)
-    : loop_(etMode), acceptor_(&loop_, addr) {
+    : loop_(etMode), acceptor_(&loop_, addr), loopPool_(&loop_, etMode) {
   acceptor_.setNewConnectionCallback(
       [this](Socket::SocketPtr socket) { newConnection(std::move(socket)); });
   for (int i = 0; i < 200; ++i) {
@@ -16,16 +16,19 @@ TcpServer::TcpServer(const IpAddress &addr, bool etMode)
 
 void TcpServer::start() {
   acceptor_.listen();
+  loopPool_.start();
   loop_.startLoop();
 }
 
 void TcpServer::newConnection(Socket::SocketPtr socket) {
+  assert(loop_.inLoopThread());
   auto conn = borrowConnection();
   conn->setConnectionCallback(connectionCallback_);
   conn->setDestroyCallback([this](TcpConnection *c) { destroyConnection(c); });
   conn->setMessageCallback(messageCallback_);
   conn->setWriteCompleteCallback(writeCompleteCallback_);
-  conn->bindSocket(std::move(socket), &loop_);
+  auto loop = loopPool_.getNextLoop();
+  conn->bindSocket(std::move(socket), loop);
 }
 
 void TcpServer::destroyConnection(TcpConnection *conn) {

@@ -3,6 +3,7 @@
 
 #include "potato/net/Acceptor.h"
 #include "potato/net/EventLoop.h"
+#include "potato/net/EventLoopPool.h"
 #include "potato/net/IpAddress.h"
 #include "potato/thread/Mutex.h"
 #include "potato/utils/NonCopyable.h"
@@ -23,6 +24,9 @@ public:
   void setConnectionCallback(Callback cb) {
     connectionCallback_ = std::move(cb);
   }
+
+  void setThreadNum(size_t threadNums) { loopPool_.setThreadNum(threadNums); }
+
   void setMessageCallback(Callback cb) { messageCallback_ = std::move(cb); }
   void setWriteCompleteCallback(Callback cb) {
     writeCompleteCallback_ = std::move(cb);
@@ -36,6 +40,7 @@ private:
   void returnConnection(TcpConnection *);
   EventLoop loop_;
   Acceptor acceptor_;
+  EventLoopPool loopPool_;
   SpinLock lock_;
   Vector connectionPool_;
   std::unordered_set<int> availIndex_ GUARDED_BY(lock_);
