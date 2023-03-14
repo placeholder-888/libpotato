@@ -13,12 +13,13 @@ set(CXX_FLAGS
     -Wextra
     -Werror
     -Wconversion
-    -Wold-style-cast
     -Woverloaded-virtual
     -Wshadow
     -Wwrite-strings
     -std=c++11
-    -Wno-unused-parameter)
+    -Wno-unused-parameter
+    -Wno-old-style-cast
+    )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   list(APPEND CXX_FLAGS "-Wno-null-dereference")
