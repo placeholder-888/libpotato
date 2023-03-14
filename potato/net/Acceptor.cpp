@@ -2,16 +2,20 @@
 #include "potato/log/Logger.h"
 #include "potato/net/EventLoop.h"
 #include "potato/net/IOWatcher.h"
-#include "potato/net/TcpSocket.h"
 
 using potato::Acceptor;
 
 Acceptor::Acceptor(EventLoop *loop, const IpAddress &address)
-    : listenSocket_(address.ipv6()), hostAddress_(address), loop_(loop),
+    : listenSocket_(address.ipv6() ? Socket::kTcpSocket6 : Socket::kTcpSocket,
+                    true),
+      hostAddress_(address), loop_(loop),
       ioEvent_(
-          new IOEvent(listenSocket_.getPlatformSocket(), loop_->watcher())) {
+          new IOEvent(loop_->watcher(), listenSocket_.getPlatformSocket())) {
   ioEvent_->setReadCallback([this]() { handleAccept(); });
+  listenSocket_.setReuseAddr(true);
+  listenSocket_.setReusePort(true);
   listenSocket_.bind(address);
+  listenSocket_.setNonBlock();
 #ifdef PLATFORM_LINUX
   idleFd_ = ::open("/dev/null", O_RDONLY | O_CLOEXEC);
   if (idleFd_ < 0) {
@@ -31,13 +35,16 @@ Acceptor::~Acceptor() {
 
 void Acceptor::listen() {
   listenSocket_.listen();
-  loop_->runInLoop([this] { ioEvent_->expectReading(); });
+  ioEvent_->expectReading();
+  listening_ = true;
+  LOG_INFO("Acceptor::listen() processId:{} listen on {}", getProcessId(),
+           hostAddress_.IpPort());
 }
 
 void Acceptor::handleAccept() {
   do {
-    auto p = listenSocket_.accept();
-    if (p.first == INVALID_SOCKET) {
+    Socket::SocketPtr ptr = listenSocket_.accept();
+    if (!ptr) {
 #ifdef PLATFORM_LINUX
       if (perrno == EMFILE) {
         ::close(idleFd_);
@@ -49,25 +56,27 @@ void Acceptor::handleAccept() {
         ::close(idleFd_);
         idleFd_ = ::open("/dev/null", O_RDONLY | O_CLOEXEC);
       } else if (perrno != PAGAIN) {
-        LOG_ERROR("Acceptor::handleAccept() accept error %s",
-                  potato::strError(perrno).c_str());
+        LOG_ERROR("Acceptor::handleAccept() accept error {}",
+                  potato::strError(perrno));
       } else {
         break;
       }
 #else
       if (perrno != PAGAIN) {
-        LOG_ERROR("Acceptor::handleAccept() accept error %s",
-                  potato::strError(perrno).c_str());
+        LOG_ERROR("Acceptor::handleAccept() accept error {}",
+                  potato::strError(perrno));
       } else {
         break;
       }
 #endif
     } else {
-      if (newConnectionCallback_ && potato::setNonBlock(p.first) == 0) {
-        newConnectionCallback_(TcpSocket::newTcpConnection(p.first, p.second));
+      ptr->setNonBlock();
+      if (newConnectionCallback_) {
+        newConnectionCallback_(std::move(ptr));
       } else {
-        LOG_WARN("Acceptor::handleAccept() newConnectionCallback_ is nullptr");
+        LOG_WARN("Acceptor::handleAccept() newConnectionCallback_ is not set");
+        ptr->close();
       }
     }
-  } while (loop_->etMode());
+  } while (true);
 }

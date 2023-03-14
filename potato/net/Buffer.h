@@ -48,6 +48,8 @@ public:
     return slice.toString();
   }
 
+  void retrieveAll() { reset(); }
+
   void retrieve(size_t len) {
     assert(len <= readableBytes());
     if (len == readableBytes())
@@ -74,8 +76,9 @@ public:
   StringSlice readAsSlice();
   void read(char *data, size_t len);
 
-private:
   void expandBuffer(size_t len);
+
+private:
   std::vector<char> buf_;
   size_t curReadIndex_{0};
   size_t curWriteIndex_{0};

@@ -1,10 +1,9 @@
 #ifndef POTATO_POTATO_NET_LOGGER_H_
 #define POTATO_POTATO_NET_LOGGER_H_
 
-#include <chrono>
+#include "3rdparty/fmt/include/fmt/core.h"
 #include <cstdio>
 #include <cstring>
-#include <ctime>
 #include <string>
 
 class SourceFile {
@@ -20,23 +19,28 @@ public:
   int size_;
 };
 
-#define LOG_TRACE(format, ...)                                                 \
-  printf("[TRACE] " format " (%s:%d)\n", ##__VA_ARGS__,                        \
-         SourceFile(__FILE__).data_, __LINE__)
-#define LOG_DEBUG(format, ...)                                                 \
-  printf("[DEBUG] " format " (%s:%d)\n", ##__VA_ARGS__,                        \
-         SourceFile(__FILE__).data_, __LINE__)
-#define LOG_INFO(format, ...)                                                  \
-  printf("[INFO] " format " (%s:%d)\n", ##__VA_ARGS__,                         \
-         SourceFile(__FILE__).data_, __LINE__)
-#define LOG_WARN(format, ...)                                                  \
-  printf("[WARN] " format " (%s:%d)\n", ##__VA_ARGS__,                         \
-         SourceFile(__FILE__).data_, __LINE__)
-#define LOG_ERROR(format, ...)                                                 \
-  printf("[ERROR] " format " (%s:%d)\n", ##__VA_ARGS__,                        \
-         SourceFile(__FILE__).data_, __LINE__)
-#define LOG_FATAL(format, ...)                                                 \
-  printf("[FATAL] " format " (%s:%d)\n", ##__VA_ARGS__,                        \
-         SourceFile(__FILE__).data_, __LINE__)
+#define LOG_TRACE(format, args...)                                             \
+  fmt::print("[TRACE] " format " ({}:{})\n", ##args,                           \
+             SourceFile(__FILE__).data_, __LINE__)
+
+#define LOG_DEBUG(format, args...)                                             \
+  fmt::print("[DEBUG] " format " ({}:{})\n", ##args,                           \
+             SourceFile(__FILE__).data_, __LINE__)
+
+#define LOG_INFO(format, args...)                                              \
+  fmt::print("[INFO] " format " ({}:{})\n", ##args,                            \
+             SourceFile(__FILE__).data_, __LINE__)
+
+#define LOG_WARN(format, args...)                                              \
+  fmt::print("[WARN] " format " ({}:{})\n", ##args,                            \
+             SourceFile(__FILE__).data_, __LINE__)
+
+#define LOG_ERROR(format, args...)                                             \
+  fmt::print("[ERROR] " format " ({}:{})\n", ##args,                           \
+             SourceFile(__FILE__).data_, __LINE__)
+
+#define LOG_FATAL(format, args...)                                             \
+  fmt::print("[FATAL] " format " ({}:{})\n", ##args,                           \
+             SourceFile(__FILE__).data_, __LINE__)
 
 #endif // POTATO_POTATO_NET_LOGGER_H_

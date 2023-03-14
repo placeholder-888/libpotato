@@ -1,24 +1,26 @@
 #include "potato/net/IOWatcher.h"
 #include "potato/log/Logger.h"
-#include "potato/net/EventLoop.h"
+#include "potato/net/SocketCommon.h"
 
 using potato::IOWatcher;
 
-IOWatcher::IOWatcher(EventLoop *loop) : ownerLoop_(loop), events_(16) {
+IOWatcher::IOWatcher(bool etMode) : events_(16), etMode_(etMode) {
   holder_ = epoll_create(1);
   if (holder_ == INVALID_HOLDER) {
     LOG_FATAL("IOWatcher::IOWatcher() error at epoll_create");
     abort();
   }
+#ifdef PLATFORM_WINDOWS
+  etMode_ = false;
+#endif
 }
 
 IOWatcher::~IOWatcher() { epoll_close(holder_); }
 
 void IOWatcher::handleIOEvent(int timeoutMs) {
-  assert(ownerLoop_->inLoopThread());
   int numEvents = epoll_wait(holder_, events_.data(),
                              static_cast<int>(events_.size()), timeoutMs);
-  LOG_DEBUG("epoll_wait return %d", numEvents);
+  LOG_DEBUG("epoll_wait return {}", numEvents);
   if (numEvents < 0) {
     LOG_ERROR("IOWatcher::handleIOEvent() error at epoll_wait");
     return;
@@ -45,14 +47,13 @@ void IOWatcher::handleIOEvent(int timeoutMs) {
 }
 
 void IOWatcher::addNewIOEvent(IOEvent *event) {
-  assert(ownerLoop_->inLoopThread());
   assert(event->watcher_ == this);
   assert(event->inEpoll_ == false);
   struct epoll_event ev {};
   ev.data.ptr = event;
   ev.events = event->events_;
 #ifdef PLATFORM_LINUX
-  if (ownerLoop_->etMode()) {
+  if (etMode_) {
     ev.events |= EPOLLET;
   }
 #endif
@@ -64,14 +65,13 @@ void IOWatcher::addNewIOEvent(IOEvent *event) {
 }
 
 void IOWatcher::modifyIOEvent(IOEvent *event) {
-  assert(ownerLoop_->inLoopThread());
   assert(event->watcher_ == this);
   assert(event->inEpoll_ == true);
   struct epoll_event ev {};
   ev.data.ptr = event;
   ev.events = event->events_;
 #ifdef PLATFORM_LINUX
-  if (ownerLoop_->etMode()) {
+  if (etMode_) {
     ev.events |= EPOLLET;
   }
 #endif
@@ -93,7 +93,6 @@ void IOWatcher::deleteIOEvent(IOEvent *event) {
 }
 
 void IOWatcher::enableIOReading(IOEvent *event) {
-  assert(ownerLoop_->inLoopThread());
   assert(event->events_ == 0);
   assert(event->inEpoll_ == false);
   event->events_ |= (EPOLLIN | EPOLLPRI);
@@ -101,7 +100,7 @@ void IOWatcher::enableIOReading(IOEvent *event) {
 }
 
 void IOWatcher::enableIOWriting(IOEvent *event) {
-  assert(ownerLoop_->inLoopThread());
+  assert(!event->isWriting_);
   assert(event->inEpoll_ == true);
   assert(event->events_ & EPOLLIN);
   event->events_ |= EPOLLOUT;
@@ -109,7 +108,7 @@ void IOWatcher::enableIOWriting(IOEvent *event) {
 }
 
 void IOWatcher::disableIOWriting(IOEvent *event) {
-  assert(ownerLoop_->inLoopThread());
+  assert(event->isWriting_);
   assert(event->inEpoll_ == true);
   assert(event->events_ & EPOLLIN);
   event->events_ &= ~EPOLLOUT;

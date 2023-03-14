@@ -10,6 +10,7 @@ namespace potato {
 
 class StringSlice {
 public:
+  constexpr const static size_t npos = SIZE_MAX;
   StringSlice(const char *str) : data_(str), len_(strlen(str)) {}
   StringSlice(const std::string &str) : data_(str.data()), len_(str.size()) {}
   StringSlice(const char *str, size_t len) : data_(str), len_(len) {}
@@ -28,7 +29,7 @@ public:
     return data_[index];
   }
 
-  StringSlice slice(size_t beginIndex, size_t len = SIZE_MAX) const {
+  StringSlice slice(size_t beginIndex, size_t len = npos) const {
     size_t res = std::min(len_ - beginIndex, len);
     return {data_ + beginIndex, res};
   }
@@ -70,9 +71,9 @@ public:
     return ret;
   }
 
-  const char *find(const StringSlice &slice) {
+  size_t find(const StringSlice &slice) {
     if (slice.empty() || empty())
-      return nullptr;
+      return npos;
     std::vector<size_t> next(slice.size(), 0);
     size_t j = 0;
     for (size_t i = 1; i < slice.size(); ++i) {
@@ -88,19 +89,19 @@ public:
         j = next[j - 1];
       if (slice[j] == data_[i]) {
         if (++j >= slice.size()) {
-          return data_ + i - j + 1;
+          return i - j + 1;
         }
       }
     }
-    return nullptr;
+    return npos;
   }
 
-  const char *find(char c) {
+  size_t find(char c) {
     for (size_t i = 0; i < len_; ++i) {
       if (data_[i] == c)
-        return data_ + i;
+        return i;
     }
-    return nullptr;
+    return npos;
   }
 
 private:

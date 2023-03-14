@@ -5,17 +5,17 @@ set(
     net/Socket.cpp
     net/EventLoop.cpp
     net/IOWatcher.cpp
-    net/TcpSocket.cpp
     net/Acceptor.cpp
-    net/PlainTcpServer.cpp
     net/Buffer.cpp
+    net/TcpConnection.cpp
+    net/TcpServer.cpp
 )
 
 if (UNIX)
-  link_libraries(pthread)
+  link_libraries(pthread fmt)
 else ()
-  set(src ${src} ${PROJECT_SOURCE_DIR}/wepoll/wepoll.c)
-  link_libraries(ws2_32 wsock32)
+  set(src ${src} ../3rdparty/wepoll/wepoll.c)
+  link_libraries(ws2_32 wsock32 fmt)
 endif ()
 add_library(potato ${src})
 include_directories(${PROJECT_SOURCE_DIR})

@@ -152,13 +152,12 @@ void testCase5() {
   TEST(buffer.readableBytes() == 3005);
   TEST(buffer.writeableBytes() == 4096 - 3005);
   auto slice = buffer.readAsSlice();
-  auto ptr = slice.find("hello");
-  TEST(ptr != nullptr);
-  TEST(ptr - slice.data() == 3000);
-  TEST(ptr - buffer.peek() == 3000);
+  auto pos = slice.find("hello");
+  TEST(pos != potato::StringSlice::npos);
+  TEST(pos == 3000);
   TEST(buffer.readableBytes() == 3005);
   TEST(buffer.writeableBytes() == 4096 - 3005);
-  buffer.retrieveUntil(ptr);
+  buffer.retrieve(pos);
   TEST(buffer.readableBytes() == 5);
   TEST(buffer.writeableBytes() == 4096 - 3005);
   TEST(buffer.readAsSlice() == "hello");

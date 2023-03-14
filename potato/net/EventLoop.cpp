@@ -8,35 +8,35 @@ using potato::Socket;
 
 namespace {
 
-std::pair<Socket, Socket> createWakeupSocket() {
+std::pair<socket_t, socket_t> createWakeupSocket() {
   socket_t socket[2];
   if (potato::socketPair(socket) < 0) {
-    LOG_FATAL("Failed to create socket pair error:%s",
-              potato::strError(perrno).c_str());
+    LOG_FATAL("Failed to create socket pair error:{}",
+              potato::strError(perrno));
     abort();
   }
   potato::setNonBlock(socket[0]);
   potato::setNonBlock(socket[1]);
-  return std::make_pair(Socket(socket[0]), Socket(socket[1]));
+  return {socket[0], socket[1]};
 }
 
 } // namespace
 
 EventLoop::EventLoop(bool etMode)
-    : threadId_(std::this_thread::get_id()), etMode_(etMode), ioWatcher_(this),
+    : threadId_(std::this_thread::get_id()), ioWatcher_(etMode),
       wakeupSocket_(createWakeupSocket()),
-      wakeupEvent_(wakeupSocket_.second.getPlatformSocket(), &ioWatcher_) {
-  wakeupEvent_.setReadCallback([this]() {
+      wakeupEvent_(&ioWatcher_, wakeupSocket_.second) {
+  wakeupEvent_.setReadCallback([this, etMode]() {
     int dummy{};
     do {
-      auto size = wakeupSocket_.second.read(&dummy, sizeof(dummy));
+      auto size = potato::read(wakeupSocket_.second, &dummy, sizeof(dummy));
       if (size != sizeof(dummy)) {
         if (perrno != PAGAIN) {
           LOG_ERROR("error at read wakeup socket");
         }
         break;
       }
-    } while (etMode_);
+    } while (etMode);
   });
 }
 
@@ -67,8 +67,8 @@ void EventLoop::stopLoop() {
 }
 
 void EventLoop::wakeup() const {
-  int dummy = 1;
-  auto size = wakeupSocket_.first.write(&dummy, sizeof(dummy));
+  int dummy = 0;
+  auto size = potato::read(wakeupSocket_.first, &dummy, sizeof(dummy));
   if (size != sizeof(dummy)) {
     LOG_ERROR("error at write wakeup socket");
   }

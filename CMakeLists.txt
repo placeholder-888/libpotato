@@ -18,7 +18,6 @@ set(CXX_FLAGS
     -Wshadow
     -Wwrite-strings
     -std=c++11
-    -Wno-deprecated-declarations
     -Wno-unused-parameter)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -40,4 +39,5 @@ message(STATUS "CXX_FLAGS = " ${CMAKE_CXX_FLAGS} " "
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/potato)
 add_subdirectory(${PROJECT_SOURCE_DIR}/tests)
+add_subdirectory(${PROJECT_SOURCE_DIR}/3rdparty/fmt)
 include_directories(${PROJECT_SOURCE_DIR})

@@ -3,49 +3,58 @@
 
 #include "potato/net/IpAddress.h"
 #include "potato/utils/NonCopyable.h"
+#include <atomic>
+#include <memory>
 
 namespace potato {
 
 class IpAddress;
 
-class Socket : NonCopyable {
+class Socket : NonCopyable, std::enable_shared_from_this<Socket> {
 public:
-  explicit Socket(socket_t socket) : socket_(socket), isOpen_(true) {}
-  Socket(Socket &&socket) noexcept;
-  Socket &operator=(Socket &&socket) noexcept;
-  virtual ~Socket();
-  bool isOpen() const { return isOpen_; }
+  using SocketPtr = std::shared_ptr<Socket>;
+  enum SockType { kTcpSocket, kTcpSocket6, kUdpSocket, kUdpSocket6 };
+
+  Socket();
+  explicit Socket(SockType type, bool abortOnErr = false);
+  explicit Socket(socket_t socket, const IpAddress &addr);
+  ~Socket();
+
+  static SocketPtr createTcpSocket(bool abortOnErr = false);
+  static SocketPtr createTcpSocket6(bool abortOnErr = false);
+  static SocketPtr createUdpSocket(bool abortOnErr = false);
+  static SocketPtr createUdpSocket6(bool abortOnErr = false);
+
+  static SocketPtr adopt(socket_t socket, const IpAddress &localAddr);
+
+  bool valid() const { return socket_ != INVALID_SOCKET; }
+  bool isConnected() const { return connected_; }
+
+  void setNonBlock() const;
   ssize_t write(const void *buf, size_t len) const;
   ssize_t read(void *buf, size_t len) const;
+
   const IpAddress &ipAddress() const { return address_; }
+
   int getSocketError() const;
   std::string getSocketErrorStr() const;
+
   socket_t getPlatformSocket() const { return socket_; }
   bool connect(const IpAddress &address);
+  void bind(const IpAddress &address);
+  void close();
+  void listen() const;
+  SocketPtr accept() const;
+
   void setReuseAddr(bool on) const;
   void setReusePort(bool on) const;
-  void bind(const IpAddress &address);
-  void setIpAddress(const IpAddress &address) { address_ = address; }
-  virtual void close();
+  void setTcpNodeLay(bool on) const;
+  void setKeepAlive(bool on) const;
 
 protected:
   socket_t socket_;
-  bool isOpen_;
+  std::atomic_bool connected_;
   IpAddress address_;
-};
-
-class ListenSocket : public Socket {
-public:
-  explicit ListenSocket(bool ipv6 = false);
-  ListenSocket(ListenSocket &&socket) noexcept;
-  ListenSocket &operator=(ListenSocket &&socket) noexcept;
-  ~ListenSocket() override = default;
-  void listen();
-  std::pair<socket_t, IpAddress> accept();
-  bool listening() const { return listening_; }
-
-private:
-  bool listening_;
 };
 
 } // namespace potato

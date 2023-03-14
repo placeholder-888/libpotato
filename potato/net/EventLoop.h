@@ -25,7 +25,6 @@ public:
   void stopLoop();
 
   bool isLooping() const { return looping_; }
-  bool etMode() const { return etMode_; }
 
   bool inLoopThread() const { return threadId_ == std::this_thread::get_id(); }
 
@@ -38,9 +37,8 @@ private:
   void callPendingFunctors();
 
   const std::thread::id threadId_;
-  bool etMode_;
   IOWatcher ioWatcher_;
-  std::pair<Socket, Socket> wakeupSocket_;
+  std::pair<socket_t, socket_t> wakeupSocket_;
   IOEvent wakeupEvent_;
   std::atomic_bool looping_{false};
   Mutex mutex_;

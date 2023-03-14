@@ -1,0 +1,6 @@
+[submodule "3rdparty/wepoll"]
+	path = 3rdparty/wepoll
+	url = git@github.com:piscisaureus/wepoll.git
+[submodule "3rdparty/fmt"]
+	path = 3rdparty/fmt
+	url = git@github.com:fmtlib/fmt.git

@@ -10,18 +10,17 @@ namespace potato {
 class EventLoop;
 class IOEvent;
 class TcpSocket;
-using TcpSocketPtr = std::shared_ptr<TcpSocket>;
 
 class Acceptor : NonCopyable {
 public:
-  using NewConnectionCallback = std::function<void(TcpSocketPtr)>;
+  using NewConnectionCallback = std::function<void(Socket::SocketPtr)>;
 
   Acceptor(EventLoop *loop, const IpAddress &address);
   ~Acceptor();
 
   void listen();
 
-  bool listening() const { return listenSocket_.listening(); }
+  bool listening() const { return listening_; }
 
   const IpAddress &hostAddress() const { return hostAddress_; }
 
@@ -32,7 +31,8 @@ public:
 private:
   void handleAccept();
 
-  ListenSocket listenSocket_;
+  bool listening_{false};
+  Socket listenSocket_;
   IpAddress hostAddress_;
   EventLoop *loop_;
   std::unique_ptr<IOEvent> ioEvent_;

@@ -263,7 +263,7 @@ int socketPair(socket_t socket[2]) {
   }
   if (::connect(clientSock, reinterpret_cast<struct sockaddr *>(&addr),
                 sizeof(addr)) < 0) {
-    LOG_ERROR("connect error %s", potato::strError(perrno).c_str());
+    LOG_ERROR("connect error {}", potato::strError(perrno));
     return -1;
   }
   socket_t serverSock = ::accept(listenSock, nullptr, nullptr);
@@ -278,4 +278,13 @@ int socketPair(socket_t socket[2]) {
   return ::socketpair(AF_UNIX, SOCK_STREAM, 0, socket);
 #endif
 }
+
+processId_t getProcessId() {
+#ifdef PLATFORM_WINDOWS
+  return GetCurrentProcessId();
+#else
+  return getpid();
+#endif
+}
+
 } // namespace potato

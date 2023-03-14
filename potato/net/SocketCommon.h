@@ -18,14 +18,19 @@
 #define PLATFORM_LINUX
 #define perrno errno
 #define PAGAIN EAGAIN
+#define processId_t pid_t
 #elif defined(WIN64) || defined(_WIN64) || defined(__WIN64__) ||               \
     defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #define PLATFORM_WINDOWS
 #include <WS2tcpip.h>
 #include <WinSock2.h>
+#include <processthreadsapi.h>
+#include <windows.h>
+
 #define perrno (WSAGetLastError())
 #define PAGAIN (WSAEWOULDBLOCK)
 #define socket_t SOCKET
+#define processId_t DWORD
 #endif
 
 namespace potato {
@@ -53,6 +58,8 @@ ssize_t read(socket_t socket, void *buf, size_t size);
 ssize_t write(socket_t socket, const void *buf, size_t size);
 // for EventLoop wakeup
 int socketPair(socket_t socket[2]);
+processId_t getProcessId();
+
 } // end namespace potato
 
 #endif // POTATO_POTATO_NET_SOCKETCOMMON_H_

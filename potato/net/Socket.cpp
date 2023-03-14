@@ -2,49 +2,69 @@
 #include "potato/log/Logger.h"
 #include "potato/net/IpAddress.h"
 
-using potato::ListenSocket;
 using potato::Socket;
 
-Socket::~Socket() {
-  LOG_DEBUG("Socket::~Socket()");
-  close();
-}
-
-void Socket::close() {
-  if (isOpen_) {
-    potato::close(socket_);
-    LOG_TRACE("Socket::close()");
-    isOpen_ = false;
+Socket::Socket(SockType type, bool abortOnErr) : connected_(false) {
+  if (type == kTcpSocket) {
+    socket_ = potato::socket(AF_INET, SOCK_STREAM, 0);
+  } else if (type == kTcpSocket6) {
+    socket_ = potato::socket(AF_INET6, SOCK_STREAM, 0);
+  } else if (type == kUdpSocket) {
+    socket_ = potato::socket(AF_INET, SOCK_DGRAM, 0);
+  } else if (type == kUdpSocket6) {
+    socket_ = potato::socket(AF_INET6, SOCK_DGRAM, 0);
+  } else {
+    LOG_FATAL("Socket::Socket() error: unknown type");
+    abort();
+  }
+  if (socket_ == INVALID_SOCKET) {
+    LOG_ERROR("Socket::Socket() error:%s", potato::strError(perrno).c_str());
+    if (abortOnErr)
+      abort();
   }
 }
 
-Socket::Socket(Socket &&socket) noexcept
-    : socket_(socket.socket_), isOpen_(socket.isOpen_) {
-  socket.isOpen_ = false;
+Socket::Socket() : socket_(INVALID_SOCKET), connected_(false) {}
+
+Socket::Socket(socket_t socket, const IpAddress &addr)
+    : socket_(socket), connected_(true), address_(addr) {
+  assert(socket_ != INVALID_SOCKET);
 }
 
-Socket &Socket::operator=(Socket &&socket) noexcept {
-  if (this == &socket)
-    return *this;
+Socket::~Socket() {
+  LOG_INFO("Socket::~Socket()");
   close();
-  socket_ = socket.socket_;
-  isOpen_ = socket.isOpen_;
-  socket.isOpen_ = false;
-  return *this;
+}
+
+void Socket::setNonBlock() const {
+  assert(valid());
+  potato::setNonBlock(socket_);
+}
+
+void Socket::close() {
+  connected_ = false;
+  if (socket_ != INVALID_SOCKET) {
+    potato::close(socket_);
+    socket_ = INVALID_SOCKET;
+  }
 }
 
 ssize_t Socket::write(const void *buf, size_t len) const {
-  assert(isOpen_);
-  return potato::write(socket_, buf, len);
+  if (connected_) {
+    return potato::write(socket_, buf, len);
+  }
+  return -1;
 }
 
 ssize_t Socket::read(void *buf, size_t len) const {
-  assert(isOpen_);
-  return potato::read(socket_, buf, len);
+  if (connected_) {
+    return potato::read(socket_, buf, len);
+  }
+  return -1;
 }
 
 void Socket::bind(const IpAddress &address) {
-  assert(isOpen_);
+  assert(connected_ == false && valid());
   socklen_t addrLen =
       address.ipv6() ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
   if (potato::bind(socket_, address.getSockAddr(), addrLen) < 0) {
@@ -55,14 +75,14 @@ void Socket::bind(const IpAddress &address) {
 }
 
 void Socket::setReuseAddr(bool on) const {
-  assert(isOpen_);
+  assert(connected_ == false && valid());
   if (potato::setReuseAddr(socket_, on) < 0) {
     LOG_ERROR("Socket::setReuseAddr()");
   }
 }
 
 void Socket::setReusePort(bool on) const {
-  assert(isOpen_);
+  assert(connected_ == false && valid());
   if (potato::setReusePort(socket_, on) < 0) {
     LOG_ERROR("Socket::setReuseAddr()");
   }
@@ -74,59 +94,8 @@ std::string Socket::getSocketErrorStr() const {
   return potato::getSocketErrorStr(socket_);
 }
 
-socket_t createListenSocket(bool ipv6) {
-  socket_t listenSock =
-      potato::socket(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (listenSock == INVALID_SOCKET) {
-    LOG_FATAL("createListenSocket()");
-    abort();
-  }
-  potato::setNonBlock(listenSock);
-  return listenSock;
-}
-
-ListenSocket::ListenSocket(bool ipv6)
-    : Socket(createListenSocket(ipv6)), listening_(false) {
-  setReuseAddr(true);
-  setReusePort(true);
-}
-
-ListenSocket::ListenSocket(ListenSocket &&socket) noexcept
-    : Socket(std::move(socket)), listening_(socket.listening_) {
-  socket.listening_ = false;
-}
-
-ListenSocket &ListenSocket::operator=(ListenSocket &&socket) noexcept {
-  if (this == &socket)
-    return *this;
-  listening_ = socket.listening_;
-  socket.listening_ = false;
-  Socket::operator=(std::move(socket));
-  return *this;
-}
-
-void ListenSocket::listen() {
-  assert(isOpen_);
-  if (potato::listen(socket_) < 0) {
-    LOG_FATAL("ListenSocket::listen()");
-    abort();
-  }
-  LOG_DEBUG("ListenSocket::listen() success");
-  listening_ = true;
-}
-
-std::pair<socket_t, potato::IpAddress> ListenSocket::accept() {
-  assert(isOpen_);
-  assert(listening_);
-  struct sockaddr_in6 addr {};
-  socklen_t addrLen = sizeof(addr);
-  socket_t sock = potato::accept(socket_, &addr, &addrLen);
-  IpAddress address(addr);
-  return std::make_pair(sock, address);
-}
-
 bool Socket::connect(const IpAddress &address) {
-  assert(isOpen_);
+  assert(connected_ == false && valid());
   socklen_t addrLen =
       address.ipv6() ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
   if (potato::connect(socket_, address.getSockAddr(), addrLen) < 0) {
@@ -136,5 +105,56 @@ bool Socket::connect(const IpAddress &address) {
   socklen_t len = sizeof(addr);
   ::getsockname(socket_, reinterpret_cast<sockaddr *>(&addr), &len);
   address_ = IpAddress(addr);
+  connected_ = true;
   return true;
+}
+
+void Socket::listen() const {
+  assert(connected_ == false && valid());
+  if (potato::listen(socket_) < 0) {
+    LOG_FATAL("Socket::listen()");
+    abort();
+  }
+}
+
+Socket::SocketPtr Socket::accept() const {
+  assert(connected_ == false && valid());
+  struct sockaddr_in6 addr {};
+  socklen_t addrLen = sizeof(addr);
+  socket_t sock = potato::accept(socket_, &addr, &addrLen);
+  IpAddress address(addr);
+  if (sock == INVALID_SOCKET) {
+    return nullptr;
+  }
+  return std::make_shared<Socket>(sock, address);
+}
+
+void Socket::setTcpNodeLay(bool on) const {
+  assert(valid());
+  potato::setTcpNoDelay(socket_, on);
+}
+
+void Socket::setKeepAlive(bool on) const {
+  assert(valid());
+  potato::setKeepAlive(socket_, on);
+}
+
+Socket::SocketPtr Socket::createTcpSocket(bool abortOnErr) {
+  return std::make_shared<Socket>(kTcpSocket, abortOnErr);
+}
+
+Socket::SocketPtr Socket::createTcpSocket6(bool abortOnErr) {
+  return std::make_shared<Socket>(kTcpSocket6, abortOnErr);
+}
+
+Socket::SocketPtr Socket::createUdpSocket(bool abortOnErr) {
+  return std::make_shared<Socket>(kUdpSocket, abortOnErr);
+}
+
+Socket::SocketPtr Socket::createUdpSocket6(bool abortOnErr) {
+  return std::make_shared<Socket>(kUdpSocket6, abortOnErr);
+}
+
+Socket::SocketPtr Socket::adopt(socket_t socket, const IpAddress &localAddr) {
+  return std::make_shared<Socket>(socket, localAddr);
 }
